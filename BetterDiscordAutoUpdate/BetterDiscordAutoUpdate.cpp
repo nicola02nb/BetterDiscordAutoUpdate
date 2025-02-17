@@ -97,6 +97,11 @@ string getLatestDiscordAppPath(const string& discordPath) {
 	return appDirectories.front().string();
 }
 
+string getLatestDiscordAppVersion(const string& discordPath) {
+	string latestAppPath = getLatestDiscordAppPath(discordPath);
+	return latestAppPath.substr(latestAppPath.find("app-") + 4);
+}
+
 string getBetterDiscordFolder() {
 	return getRoamingAppDataPath() + "\\BetterDiscord";
 }
@@ -143,7 +148,7 @@ void downloadBetterDiscord(const string& asarDestinationPath) {
 	system(command.c_str());
 }
 
-bool isAlreadyPatched(const string& betterDiscordDirectory, const string& appVersion, const string& discordExeName) {
+bool isAlreadyPatched(const string& betterDiscordDirectory, const string& discordExeName, const string& appVersion) {
 	string lastPatchedVersionFile = betterDiscordDirectory + "\\lastPatchedVersion.txt";
 	string name = discordExeName.substr(0, discordExeName.find(".exe"));
 	string toWrite = name + " " + appVersion;
@@ -199,7 +204,7 @@ void installBetterDiscord(const string& betterDiscordDirectory, const string& di
 
 	string latestAppPath = getLatestDiscordAppPath(discordDirectory);
 	string appVersion = latestAppPath.substr(latestAppPath.find("app-") + 4);
-	if (isAlreadyPatched(betterDiscordDirectory, appVersion, discordExeName)) {
+	if (isAlreadyPatched(betterDiscordDirectory, discordExeName, appVersion)) {
 		cout << "BetterDiscord Was Already Installed!" << endl;
 		return;
 	}
@@ -263,8 +268,8 @@ int main(int argc, char* argv[]) {
 	string betterDiscordDirectory = getBetterDiscordFolder();
 
 	setupLogging(betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log");
-	
-	
+
+
 	cout << "BetterDiscord Auto Update" << endl;
 	cout << "Installing Channel: " << channel << endl;
 	cout << "Discord Folder: " << discordDirectory << endl;
@@ -275,7 +280,7 @@ int main(int argc, char* argv[]) {
 		string updateExe = discordDirectory + "\\Update.exe";
 		string newUpdateExe = discordDirectory + "\\Update.exe";
 
-		if (fs::exists(updateExe)) {
+		if (fs::exists(updateExe) && !fs::exists(updateMoved)) {
 			cout << "Renaming Update.exe from Discord Folder to Update.moved.exe..." << endl;
 			fs::rename(updateExe, updateMoved);
 		}
@@ -283,9 +288,11 @@ int main(int argc, char* argv[]) {
 		cout << "Moving BetterDiscordAutoUpdate.exe to Discord Folder as Update.exe..." << endl;
 		fs::copy_file(getExecutablePath(), newUpdateExe, fs::copy_options::overwrite_existing);
 	}
-	
-	installBetterDiscord(betterDiscordDirectory, discordDirectory, discordExeName);
-	runProcess(updateMoved, "--processStart "+ discordExeName);
+
+	do {
+		installBetterDiscord(betterDiscordDirectory, discordDirectory, discordExeName);
+		runProcess(updateMoved, "--processStart " + discordExeName);
+	} while (!isAlreadyPatched(betterDiscordDirectory, discordExeName, getLatestDiscordAppVersion(discordDirectory)));
 
 	return 0;
 }
