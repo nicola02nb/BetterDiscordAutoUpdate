@@ -1,5 +1,5 @@
 # BetterDiscordAutoUpdate
-Performs the automatic installation of [BetterDiscord](https://github.com/BetterDiscord/BetterDiscord) after Discord updates.
+Performs the automatic installation of [BetterDiscord](https://github.com/BetterDiscord/BetterDiscord) after each Discord updates.
 
 ## OS
 Supported OS:
