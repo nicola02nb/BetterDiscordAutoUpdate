@@ -136,13 +136,13 @@ bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
 		return true;
 	}
 	else {
-		cerr << "Unable to open file: " << indexPath << endl;
+		cout << "Unable to open file: " << indexPath << endl;
 		return false;
 	}
 }
 
 void downloadBetterDiscord(const string& asarDestinationPath) {
-	cout << "Downloading BetterDiscord..." << endl;
+	cout << "Downloading betterdiscord.asar into Betterdiscord\\data Folder..." << endl;
 	string url = "https://github.com/BetterDiscord/BetterDiscord/releases/latest/download/betterdiscord.asar";
 	string command = "curl -L -o \"" + asarDestinationPath + "\" \"" + url + "\"";
 	system(command.c_str());
@@ -179,7 +179,7 @@ bool isAlreadyPatched(const string& betterDiscordDirectory, const string& discor
 		fileWrite.close();
 	}
 	else {
-		cerr << "Unable to open file: " << lastPatchedVersionFile << endl;
+		cout << "Unable to open file: " << lastPatchedVersionFile << endl;
 	}
 	return false;
 }
@@ -206,15 +206,15 @@ void installBetterDiscord(const string& betterDiscordDirectory, const string& di
 	string appVersion = latestAppPath.substr(latestAppPath.find("app-") + 4);
 	if (isAlreadyPatched(betterDiscordDirectory, discordExeName, appVersion)) {
 		cout << "BetterDiscord Was Already Installed!" << endl;
-		return;
 	}
 	else if (patchDiscord(latestAppPath, asar)) {
 		stopDiscord(discordExeName);
 		cout << "BetterDiscord Installed!" << endl;
 	}
 	else {
-		cerr << "Failed to patch Discord!" << endl;
+		cout << "Failed to patch Discord!" << endl;
 	}
+	cout << endl;
 }
 
 string toLower(const string& str) {
@@ -262,7 +262,8 @@ string getDiscordExeName(const string& channel) {
 
 int main(int argc, char* argv[]) {
 	string channel = getChannel(argc, argv);
-	string exeDir = getExecutableDir();
+	string autoUpdateDirectory = getExecutableDir();
+	string autoUpdatePath = getExecutablePath();
 	string discordDirectory = getDiscordFolder(channel);
 	string discordExeName = getDiscordExeName(channel);
 	string betterDiscordDirectory = getBetterDiscordFolder();
@@ -270,29 +271,41 @@ int main(int argc, char* argv[]) {
 	setupLogging(betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log");
 
 
-	cout << "BetterDiscord Auto Update" << endl;
-	cout << "Installing Channel: " << channel << endl;
-	cout << "Discord Folder: " << discordDirectory << endl;
-	cout << "Update Exe Path: " << exeDir << endl;
+	cout << "BetterDiscord Auto Update" << endl << endl;
+
+	cout << "Installing Channel:\t\t\t" << channel << endl;
+	cout << "BetterDiscordAutoUpdate.exe Directory:\t" << autoUpdateDirectory << endl;
+	cout << "BetterDiscordAutoUpdate.exe Path:\t" << autoUpdatePath << endl;
+	cout << "Discord Directory:\t\t\t" << discordDirectory << endl;
+	cout << "BetterDiscord Directory:\t\t" << betterDiscordDirectory << endl;
+	cout << endl;
 
 	string updateMoved = discordDirectory + "\\Update.moved.exe";
-	if (exeDir != discordDirectory) {
+	if (autoUpdateDirectory != discordDirectory) {
 		string updateExe = discordDirectory + "\\Update.exe";
 		string newUpdateExe = discordDirectory + "\\Update.exe";
 
-		if (fs::exists(updateExe) && !fs::exists(updateMoved)) {
-			cout << "Renaming Update.exe from Discord Folder to Update.moved.exe..." << endl;
-			fs::rename(updateExe, updateMoved);
+		if (fs::exists(updateExe)) {
+			if (!fs::exists(updateMoved)) {
+				cout << "Renaming Update.exe from Discord Folder to Update.moved.exe..." << endl;
+				fs::rename(updateExe, updateMoved);
+			}
 		}
-
-		cout << "Moving BetterDiscordAutoUpdate.exe to Discord Folder as Update.exe..." << endl;
-		fs::copy_file(getExecutablePath(), newUpdateExe, fs::copy_options::overwrite_existing);
+		
+		cout << "Moving BetterDiscordAutoUpdate.exe to Discord Folder as Update.exe..." << endl << endl;
+		fs::copy_file(autoUpdatePath, newUpdateExe, fs::copy_options::overwrite_existing);
 	}
 
 	do {
 		installBetterDiscord(betterDiscordDirectory, discordDirectory, discordExeName);
 		runProcess(updateMoved, "--processStart " + discordExeName);
 	} while (!isAlreadyPatched(betterDiscordDirectory, discordExeName, getLatestDiscordAppVersion(discordDirectory)));
+
+	if (argc == 1) {
+		cout << "You can fint this log at: " << betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log" << endl << endl;
+		cout << "Press any key to exit..." << endl;
+		cin.get();
+	}
 
 	return 0;
 }
