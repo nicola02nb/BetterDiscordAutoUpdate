@@ -5,7 +5,7 @@ Performs the automatic installation of [BetterDiscord](https://github.com/Better
 Supported OS:
 - Windows
 
-## Usage:
+## Installation\Usage:
 1. Download `BetterDiscordAutoUpdate.exe` from the [latest release](https://github.com/nicola02nb/BetterDiscordAutoUpdate/releases/latest) page.
 2. Double-click to open `BetterDiscordAutoUpdate.exe` (A terminal should open).
 3. If the execution went well, you're done.
