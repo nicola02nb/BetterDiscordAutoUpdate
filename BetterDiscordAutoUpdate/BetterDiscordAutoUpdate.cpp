@@ -97,6 +97,22 @@ string getLatestDiscordAppPath(const string& discordPath) {
 	return appDirectories.front().string();
 }
 
+string getLatestDicsordCorePath(const string& discordAppPath) {
+	vector<fs::path> coreDirectories;
+	for (const auto& entry : fs::directory_iterator(discordAppPath)) {
+		if (entry.is_directory() && entry.path().filename().string().find("discord_desktop_core-") == 0) {
+			coreDirectories.push_back(entry.path());
+		}
+	}
+	if (coreDirectories.empty()) {
+		throw runtime_error("No discord_desktop_core-* directories found in " + discordAppPath);
+	}
+	sort(coreDirectories.begin(), coreDirectories.end(), [](const fs::path& a, const fs::path& b) {
+		return a.filename().string() > b.filename().string();
+		});
+	return coreDirectories.front().string() + "\\discord_desktop_core";
+}
+
 string getLatestDiscordAppVersion(const string& discordPath) {
 	string latestAppPath = getLatestDiscordAppPath(discordPath);
 	return latestAppPath.substr(latestAppPath.find("app-") + 4);
@@ -122,7 +138,7 @@ string escapeBackslashes(const string& input) {
 bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
 	cout << "Patching Discord..." << endl;
 
-	string indexPath = discordAppDirectory + "\\modules\\discord_desktop_core-1\\discord_desktop_core\\index.js";
+	string indexPath = getLatestDicsordCorePath(discordAppDirectory + "\\modules") + "\\index.js";
 
 	string escapedAsarPath = escapeBackslashes(asarPath);
 	string toWrite = "require('" + escapedAsarPath + "');\nmodule.exports = require('./core.asar'); ";
@@ -148,40 +164,16 @@ void downloadBetterDiscord(const string& asarDestinationPath) {
 	system(command.c_str());
 }
 
-bool isAlreadyPatched(const string& betterDiscordDirectory, const string& discordExeName, const string& appVersion) {
-	string lastPatchedVersionFile = betterDiscordDirectory + "\\lastPatchedVersion.txt";
-	string name = discordExeName.substr(0, discordExeName.find(".exe"));
-	string toWrite = name + " " + appVersion;
-	if (!fs::exists(lastPatchedVersionFile)) {
-		ofstream fileCreate(lastPatchedVersionFile);
-		fileCreate.close();
-	}
-
-	// Check if the file exists
-	if (fs::exists(lastPatchedVersionFile)) {
-		// Read the current content of the file
-		ifstream fileRead(lastPatchedVersionFile);
-		stringstream buffer;
-		buffer << fileRead.rdbuf();
-		string currentContent = buffer.str();
-		fileRead.close();
-
-		// Check if the file contains the string toWrite
-		if (currentContent.find(toWrite) != string::npos) {
-			return true;
-		}
-	}
-
-	// Write to the file if it doesn't contain the string
-	ofstream fileWrite(lastPatchedVersionFile, ios::app);
-	if (fileWrite.is_open()) {
-		fileWrite << toWrite << endl;
-		fileWrite.close();
-	}
-	else {
-		cout << "Unable to open file: " << lastPatchedVersionFile << endl;
-	}
-	return false;
+bool isAlreadyPatched(const string& discordDirectory, const string& discordExeName, const string& appVersion) {
+    string indexPath = getLatestDicsordCorePath(getLatestDiscordAppPath(discordDirectory) + "\\modules") + "\\index.js";
+    ifstream indexFile(indexPath);
+    if (indexFile.is_open()) {
+        stringstream buffer;
+        buffer << indexFile.rdbuf();
+        indexFile.close();
+        return buffer.str().find("betterdiscord.asar") != string::npos;
+    }
+    return false;
 }
 
 void installBetterDiscord(const string& betterDiscordDirectory, const string& discordDirectory, const string& discordExeName) {
@@ -204,7 +196,7 @@ void installBetterDiscord(const string& betterDiscordDirectory, const string& di
 
 	string latestAppPath = getLatestDiscordAppPath(discordDirectory);
 	string appVersion = latestAppPath.substr(latestAppPath.find("app-") + 4);
-	if (isAlreadyPatched(betterDiscordDirectory, discordExeName, appVersion)) {
+	if (isAlreadyPatched(discordDirectory, discordExeName, appVersion)) {
 		cout << "BetterDiscord Was Already Installed!" << endl;
 	}
 	else if (patchDiscord(latestAppPath, asar)) {
@@ -299,10 +291,10 @@ int main(int argc, char* argv[]) {
 	do {
 		installBetterDiscord(betterDiscordDirectory, discordDirectory, discordExeName);
 		runProcess(updateMoved, "--processStart " + discordExeName);
-	} while (!isAlreadyPatched(betterDiscordDirectory, discordExeName, getLatestDiscordAppVersion(discordDirectory)));
+	} while (!isAlreadyPatched(discordDirectory, discordExeName, getLatestDiscordAppVersion(discordDirectory)));
 
 	if (argc == 1) {
-		cout << "You can fint this log at: " << betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log" << endl << endl;
+		cout << "You can find this log at: " << betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log" << endl << endl;
 		cout << "Press any key to exit..." << endl;
 		cin.get();
 	}
