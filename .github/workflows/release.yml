@@ -1,0 +1,78 @@
+name: MSBuild
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.2.3)'
+        required: true
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        platform: [x64]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: BetterDiscordAutoUpdate-${{ inputs.version }}_${{ matrix.architecture }}
+        path: ${{ matrix.architecture }}/Release/BetterDiscordAutoUpdate-${{ inputs.version }}_${{ matrix.architecture }}.exe
+
+  create-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: Download Artifact
+          uses: actions/download-artifact@v4
+          with:
+            merge-multiple: true
+        - name: Deploy continuous
+          uses: crowbarmaster/GH-Automatic-Releases@latest
+          with:
+            repo_token: ${{ secrets.GITHUB_TOKEN }}
+            automatic_release_tag: ${{ inputs.version }}
+            prerelease: ${{ startsWith(github.ref, 'refs/tags/continuous') || inputs.prerelease }}
+            title: Release ${{ inputs.version }}
+            files: |
+              BetterDiscordAutoUpdate-*
+            body: |
+              # BetterDiscordAutoUpdate
+              Performs the automatic installation of [BetterDiscord](https://github.com/BetterDiscord/BetterDiscord) after each Discord updates.
+
+              ## Installation\Usage:
+              1. Download `BetterDiscordAutoUpdate.exe` from the [latest release](https://github.com/nicola02nb/BetterDiscordAutoUpdate/releases/latest) page.
+              2. Double-click to open `BetterDiscordAutoUpdate.exe` (A terminal should open).
+              3. If the execution went well(no `[ERROR]` displayed), you're done.
+              4. Now BetterDiscord will install automatically after each Discord update.
