@@ -50,13 +50,13 @@ jobs:
     - name: Rename Exe with Version and Architecture
       run: |
         $exe = Get-ChildItem -Path ${{ matrix.platform }}/Release/*.exe
-        $exe | Rename-Item -NewName { $_.Name -replace 'BetterDiscordAutoUpdate.exe', "BetterDiscordAutoUpdate-${{ inputs.version }}_${{ matrix.platform }}.exe" }
+        $exe | Rename-Item -NewName { $_.Name -replace 'BetterDiscordAutoUpdate.exe', "BetterDiscordAutoUpdate_${{ matrix.platform }}.exe" }
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: BetterDiscordAutoUpdate-${{ inputs.version }}_${{ matrix.platform }}
-        path: ${{ matrix.platform }}/Release/BetterDiscordAutoUpdate-${{ inputs.version }}_${{ matrix.platform }}.exe
+        name: BetterDiscordAutoUpdate_${{ matrix.platform }}
+        path: ${{ matrix.platform }}/Release/BetterDiscordAutoUpdate_${{ matrix.platform }}.exe
 
   create-release:
     needs: [build]
