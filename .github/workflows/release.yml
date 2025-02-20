@@ -75,7 +75,7 @@ jobs:
             prerelease: ${{ startsWith(github.ref, 'refs/tags/continuous') || inputs.prerelease }}
             title: Release ${{ inputs.version }}
             files: |
-              BetterDiscordAutoUpdate-*
+              BetterDiscordAutoUpdate*
             body: |
               # BetterDiscordAutoUpdate
               Performs the automatic installation of [BetterDiscord](https://github.com/BetterDiscord/BetterDiscord) after each Discord updates.
