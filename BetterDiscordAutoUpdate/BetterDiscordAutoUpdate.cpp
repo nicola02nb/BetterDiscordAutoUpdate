@@ -87,7 +87,7 @@ string getLatestDiscordAppPath(const string& discordPath) {
 	}
 
 	if (appDirectories.empty()) {
-		throw runtime_error("No app-* directories found in " + discordPath);
+		throw runtime_error("[ERROR] No app-* directories found in " + discordPath);
 	}
 
 	sort(appDirectories.begin(), appDirectories.end(), [](const fs::path& a, const fs::path& b) {
@@ -105,7 +105,7 @@ string getLatestDicsordCorePath(const string& discordAppPath) {
 		}
 	}
 	if (coreDirectories.empty()) {
-		throw runtime_error("No discord_desktop_core-* directories found in " + discordAppPath);
+		throw runtime_error("[ERROR] No discord_desktop_core-* directories found in " + discordAppPath);
 	}
 	sort(coreDirectories.begin(), coreDirectories.end(), [](const fs::path& a, const fs::path& b) {
 		return a.filename().string() > b.filename().string();
@@ -152,7 +152,7 @@ bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
 		return true;
 	}
 	else {
-		cout << "Unable to open file: " << indexPath << endl;
+		cout << "[ERROR] Unable to open file: " << indexPath << endl;
 		return false;
 	}
 }
@@ -204,7 +204,7 @@ void installBetterDiscord(const string& betterDiscordDirectory, const string& di
 		cout << "BetterDiscord Installed!" << endl;
 	}
 	else {
-		cout << "Failed to patch Discord!" << endl;
+		cout << "[ERROR] Failed to patch Discord!" << endl;
 	}
 	cout << endl;
 }
