@@ -4,11 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g. 1.2.3)'
+        description: "Release tag(e.g., 1.2.3) without starting 'v'"
         required: true
+        default: "continuous"
+        type: string
       prerelease:
-        description: 'Is this a prerelease?'
-        required: false
+        description: "Set as prerelease"
+        required: true
+        default: true
+        type: boolean
 env:
   # Path to the solution file relative to the root of the project.
   SOLUTION_FILE_PATH: .
