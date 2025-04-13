@@ -5,6 +5,9 @@ Performs the automatic installation of [BetterDiscord](https://github.com/Better
 Supported OS:
 - Windows
 
+## Known Issues
+- After a discord update, discord starts without BD installed and you need to manually close and reopen discord to re-install BD once.
+
 ## Installation\Usage:
 1. Download `BetterDiscordAutoUpdate.exe` from the [latest release](https://github.com/nicola02nb/BetterDiscordAutoUpdate/releases/latest) page.
 2. Double-click to open `BetterDiscordAutoUpdate.exe` (A terminal should open).
