@@ -157,11 +157,73 @@ bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
 	}
 }
 
+string getBetterDiscordLatestVersion() {
+	string url = "https://api.github.com/repos/BetterDiscord/BetterDiscord/releases/latest";
+	string command = "curl -s " + url;
+	string result;
+
+	// Execute the curl command and capture the output
+	FILE* pipe = _popen(command.c_str(), "r");
+	if (!pipe) {
+		throw runtime_error("[ERROR] Failed to execute curl command.");
+	}
+
+	char buffer[128];
+	while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+		result += buffer;
+	}
+	_pclose(pipe);
+
+	// Parse the JSON response to extract the "tag_name" field
+	size_t tagPos = result.find("\"tag_name\": ");
+	if (tagPos != string::npos) {
+		size_t start = result.find("\"", tagPos + 12) + 2;
+		size_t end = result.find("\"", start);
+		if (start != string::npos && end != string::npos) {
+			return result.substr(start, end - start);
+		}
+	}
+
+	throw runtime_error("[ERROR] Failed to retrieve the latest BetterDiscord version.");
+}
+
+void setBetterdiscordLocalVersion(const string& betterDiscordDirectory) {  
+  string version = getBetterDiscordLatestVersion();  
+  string versionFilePath = betterDiscordDirectory + "\\version.txt";  
+
+  ofstream versionFile(versionFilePath, ios::trunc);  
+  if (versionFile.is_open()) {  
+      versionFile << version;  
+      versionFile.close();  
+      cout << "BetterDiscord local version set to: " << version << endl;  
+  } else {  
+      cout << "[ERROR] Unable to write to version file: " << versionFilePath << endl;  
+  }  
+}
+
 void downloadBetterDiscord(const string& asarDestinationPath) {
 	cout << "Downloading betterdiscord.asar into Betterdiscord\\data Folder..." << endl;
 	string url = "https://github.com/BetterDiscord/BetterDiscord/releases/latest/download/betterdiscord.asar";
 	string command = "curl -L -o \"" + asarDestinationPath + "\" \"" + url + "\"";
 	system(command.c_str());
+}
+
+string getBetterDiscordLocalVersion(const string& betterDiscordDirectory) {  
+   string versionFilePath = betterDiscordDirectory + "\\version.txt";  
+
+   if (!fs::exists(versionFilePath)) {
+       return "";  
+   }  
+
+   ifstream versionFile(versionFilePath);  
+   if (versionFile.is_open()) {  
+       string version;  
+       getline(versionFile, version);  
+       versionFile.close();  
+       return version;  
+   }  
+
+   throw runtime_error("[ERROR] Unable to read version.txt.");  
 }
 
 bool isAlreadyPatched(const string& discordAppDirectory) {
@@ -174,6 +236,14 @@ bool isAlreadyPatched(const string& discordAppDirectory) {
         return buffer.str().find("betterdiscord.asar") != string::npos;
     }
     return false;
+}
+
+bool isBetterDiscordUpToDate(const string& betterDiscordDirectory) {
+	string latestVersion = getBetterDiscordLatestVersion();
+	string versionFilePath = getBetterDiscordLocalVersion(betterDiscordDirectory);
+	cout << "Latest Version: " << latestVersion << endl;
+	cout << "Local Version: " << versionFilePath << endl;
+	return latestVersion == versionFilePath;
 }
 
 bool installBetterDiscord(const string& betterDiscordDirectory, const string& discordAppDirectory) {
@@ -189,9 +259,18 @@ bool installBetterDiscord(const string& betterDiscordDirectory, const string& di
 	string asar = data + "\\betterdiscord.asar";
 	if (!fs::exists(asar)) {
 		downloadBetterDiscord(asar);
+		setBetterdiscordLocalVersion(betterDiscordDirectory);
 	}
 	else {
-		cout << "File betterdiscord.asar Was Already Downloaded!" << endl;
+		if (!isBetterDiscordUpToDate(betterDiscordDirectory)) {
+			cout << "Updating BetterDiscord..." << endl;
+			downloadBetterDiscord(asar);
+			setBetterdiscordLocalVersion(betterDiscordDirectory);
+		}
+		else
+		{
+			cout << "File betterdiscord.asar was already downloaded and up-to-date!" << endl;
+		}
 	}
 
 	if (isAlreadyPatched(discordAppDirectory)) {
