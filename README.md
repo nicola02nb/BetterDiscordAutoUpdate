@@ -15,7 +15,7 @@ Supported OS:
 4. Now BetterDiscord will install automatically after each Discord update.
 
 ### Update
-1. Go to your %LOCALAPPDATA%\Disocrd folder
+1. Go to your %LOCALAPPDATA%\Discord folder
     1. If there is Update.moved.exe, you shuld first delete the older Update.exe
     2. Then rename Update.moved.exe to Update.exe
 2. Proceed with a normal [Installation](#installationusage)
