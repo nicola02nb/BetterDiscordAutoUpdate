@@ -18,7 +18,7 @@ Supported OS:
 1. Go to your %LOCALAPPDATA%\Disocrd folder
     1. If there is Update.moved.exe, you shuld first delete the older Update.exe
     2. Then rename Update.moved.exe to Update.exe
-2. Proceed with a normal [Installation](#Installation\Usage)
+2. Proceed with a normal [Installation](#installationusage)
 
 ## How it works
 `BetterDiscordAutoUpdate.exe` is a `.exe` file for `Windows` that renames the original `Update.exe` to `Update.moved.exe` and self-copies into the Discord folder as `Update.exe` to catch all executions of that file and perform checks and actions to keep BetterDiscord installed.
