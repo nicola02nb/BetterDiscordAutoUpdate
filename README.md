@@ -27,17 +27,22 @@ Supported OS:
 3. Rename `Update.moved.exe` to `Update.exe`.
 4. Done.
 
-### Installation for `PTB` or `Canary`
-The `BetterDiscordAutoUpdate.exe` should be run in a terminal by adding a launch argument:
-
-#### PTB:
+### CLI Arguments`
+#### Skip BD Installation
 ```ps1
-.\BetterDiscordAutoUpdate.exe ptb
+.\BetterDiscordAutoUpdate.exe --auto-update-skip-installation
 ```
-
-#### Canary:
+#### Stable
 ```ps1
-.\BetterDiscordAutoUpdate.exe canary
+.\BetterDiscordAutoUpdate.exe --ptb
+```
+#### PTB
+```ps1
+.\BetterDiscordAutoUpdate.exe --ptb
+```
+#### Canary
+```ps1
+.\BetterDiscordAutoUpdate.exe --canary
 ```
 
 ## Build

@@ -35,24 +35,32 @@ private:
 	streambuf* sb2;
 };
 
-void setupLogging(const string& logFilePath) {
+enum DiscordChannel
+{
+	error = -1,
+	stable,
+	ptb ,
+	canary
+};
+
+static void setupLogging(const string& logFilePath) {
 	static ofstream logFile(logFilePath);
 	static DualStreamBuf dualStreamBuf(cout.rdbuf(), logFile.rdbuf());
 	cout.rdbuf(&dualStreamBuf);
 }
 
-string getExecutablePath() {
+static string getExecutablePath() {
 	char path[MAX_PATH];
 	GetModuleFileNameA(NULL, path, MAX_PATH);
 	return string(path);
 }
 
-string getExecutableDir() {
+static string getExecutableDir() {
 	string exePath = getExecutablePath();
 	return exePath.substr(0, exePath.find_last_of("\\/"));
 }
 
-string getRoamingAppDataPath() {
+static string getRoamingAppDataPath() {
 	char path[MAX_PATH];
 	if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
 		return string(path);
@@ -60,7 +68,7 @@ string getRoamingAppDataPath() {
 	return "";
 }
 
-string getLocalAppDataPath() {
+static string getLocalAppDataPath() {
 	char path[MAX_PATH];
 	if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
 		return string(path);
@@ -68,17 +76,17 @@ string getLocalAppDataPath() {
 	return "";
 }
 
-void runProcess(const string& exePath, const string& args) {
+static void runProcess(const string& exePath, const string& args) {
 	ShellExecuteA(NULL, "open", exePath.c_str(), args.empty() ? NULL : args.c_str(), NULL, SW_HIDE);
 }
 
-void stopDiscord(const string& exeName) {
+static void stopDiscord(const string& exeName) {
 	cout << "Stopping " + exeName +"..." << endl;
 	string command = "taskkill /f /im " + exeName + " >nul 2>&1";
 	system(command.c_str());
 }
 
-string getLatestDiscordAppPath(const string& discordPath) {
+static string getLatestDiscordAppPath(const string& discordPath) {
 	vector<fs::path> appDirectories;
 	for (const auto& entry : fs::directory_iterator(discordPath)) {
 		if (entry.is_directory() && entry.path().filename().string().find("app-") == 0) {
@@ -97,7 +105,7 @@ string getLatestDiscordAppPath(const string& discordPath) {
 	return appDirectories.front().string();
 }
 
-string getLatestDiscordCorePath(const string& discordAppPath) {
+static string getLatestDiscordCorePath(const string& discordAppPath) {
 	vector<fs::path> coreDirectories;
 	for (const auto& entry : fs::directory_iterator(discordAppPath)) {
 		if (entry.is_directory() && entry.path().filename().string().find("discord_desktop_core-") == 0) {
@@ -113,16 +121,16 @@ string getLatestDiscordCorePath(const string& discordAppPath) {
 	return coreDirectories.front().string() + "\\discord_desktop_core";
 }
 
-string getLatestDiscordAppVersion(const string& discordPath) {
+static string getLatestDiscordAppVersion(const string& discordPath) {
 	string latestAppPath = getLatestDiscordAppPath(discordPath);
 	return latestAppPath.substr(latestAppPath.find("app-") + 4);
 }
 
-string getBetterDiscordFolder() {
+static string getBetterDiscordDirectory() {
 	return getRoamingAppDataPath() + "\\BetterDiscord";
 }
 
-string escapeBackslashes(const string& input) {
+static string escapeBackslashes(const string& input) {
 	string output;
 	for (char c : input) {
 		if (c == '\\') {
@@ -135,7 +143,7 @@ string escapeBackslashes(const string& input) {
 	return output;
 }
 
-bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
+static bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
 	cout << "Patching Discord..." << endl;
 
 	string indexPath = getLatestDiscordCorePath(discordAppDirectory + "\\modules") + "\\index.js";
@@ -157,7 +165,7 @@ bool patchDiscord(const string& discordAppDirectory, const string& asarPath) {
 	}
 }
 
-string getBetterDiscordLatestVersion() {
+static string getBetterDiscordLatestVersion() {
 	string url = "https://api.github.com/repos/BetterDiscord/BetterDiscord/releases/latest";
 	string command = "curl -s " + url;
 	string result;
@@ -187,7 +195,7 @@ string getBetterDiscordLatestVersion() {
 	throw runtime_error("[ERROR] Failed to retrieve the latest BetterDiscord version.");
 }
 
-void setBetterdiscordLocalVersion(const string& betterDiscordDirectory) {  
+static void setBetterdiscordLocalVersion(const string& betterDiscordDirectory) {
   string version = getBetterDiscordLatestVersion();  
   string versionFilePath = betterDiscordDirectory + "\\version.txt";  
 
@@ -201,14 +209,15 @@ void setBetterdiscordLocalVersion(const string& betterDiscordDirectory) {
   }  
 }
 
-void downloadBetterDiscord(const string& asarDestinationPath) {
-	cout << "Downloading betterdiscord.asar into Betterdiscord\\data Folder..." << endl;
+static bool downloadBetterDiscord(const string& asarDestinationPath) {
+	cout << "Downloading betterdiscord.asar to " + asarDestinationPath + "..." << endl;
 	string url = "https://github.com/BetterDiscord/BetterDiscord/releases/latest/download/betterdiscord.asar";
 	string command = "curl -L -o \"" + asarDestinationPath + "\" \"" + url + "\"";
 	system(command.c_str());
+	return fs::exists(asarDestinationPath);
 }
 
-string getBetterDiscordLocalVersion(const string& betterDiscordDirectory) {  
+static string getBetterDiscordLocalVersion(const string& betterDiscordDirectory) {
    string versionFilePath = betterDiscordDirectory + "\\version.txt";  
 
    if (!fs::exists(versionFilePath)) {
@@ -226,7 +235,7 @@ string getBetterDiscordLocalVersion(const string& betterDiscordDirectory) {
    throw runtime_error("[ERROR] Unable to read version.txt.");  
 }
 
-bool isAlreadyPatched(const string& discordAppDirectory) {
+static bool isAlreadyPatched(const string& discordAppDirectory) {
     string indexPath = getLatestDiscordCorePath(discordAppDirectory + "\\modules") + "\\index.js";
     ifstream indexFile(indexPath);
     if (indexFile.is_open()) {
@@ -238,7 +247,7 @@ bool isAlreadyPatched(const string& discordAppDirectory) {
     return false;
 }
 
-bool isBetterDiscordUpToDate(const string& betterDiscordDirectory) {
+static bool isBetterDiscordUpToDate(const string& betterDiscordDirectory) {
 	string latestVersion = getBetterDiscordLatestVersion();
 	string versionFilePath = getBetterDiscordLocalVersion(betterDiscordDirectory);
 	cout << "Latest Version: " << latestVersion << endl;
@@ -246,26 +255,45 @@ bool isBetterDiscordUpToDate(const string& betterDiscordDirectory) {
 	return latestVersion == versionFilePath;
 }
 
-bool installBetterDiscord(const string& betterDiscordDirectory, const string& discordAppDirectory) {
+static bool installBetterDiscord(const string& betterDiscordDirectory, const string& discordAppDirectory) {
 	cout << "Installing BetterDiscord..." << endl;
 
 	if (!fs::exists(betterDiscordDirectory)) {
-		fs::create_directory(betterDiscordDirectory);
+		if (!fs::create_directory(betterDiscordDirectory)){
+			cout << "[ERROR] Failed to create BetterDiscord directory!" << endl;
+			return false;
+		}
 	}
 	string data = betterDiscordDirectory + "\\data";
 	if (!fs::exists(data)) {
-		fs::create_directory(data);
+		if (!fs::create_directory(data)){
+			cout << "[ERROR] Failed to create BetterDiscord data directory!" << endl;
+			return false;
+		}
 	}
 	string asar = data + "\\betterdiscord.asar";
 	if (!fs::exists(asar)) {
-		downloadBetterDiscord(asar);
-		setBetterdiscordLocalVersion(betterDiscordDirectory);
+		cout << "Downloading BetterDiscorde..." << endl;
+		if (downloadBetterDiscord(asar)) {
+			setBetterdiscordLocalVersion(betterDiscordDirectory);
+			cout << "BetterDiscord downloaded!" << endl;
+		}
+		else {
+			cout << "[ERROR] Failed to download BetterDiscord!" << endl;
+			return false;
+		}
 	}
 	else {
 		if (!isBetterDiscordUpToDate(betterDiscordDirectory)) {
 			cout << "Updating BetterDiscord..." << endl;
-			downloadBetterDiscord(asar);
-			setBetterdiscordLocalVersion(betterDiscordDirectory);
+			if (downloadBetterDiscord(asar)) {
+				setBetterdiscordLocalVersion(betterDiscordDirectory);
+				cout << "BetterDiscord updated!" << endl;
+			}
+			else {
+				cout << "[ERROR] Failed to update BetterDiscord!" << endl;
+				return false;
+			}
 		}
 		else
 		{
@@ -273,98 +301,116 @@ bool installBetterDiscord(const string& betterDiscordDirectory, const string& di
 		}
 	}
 
+	cout << "Using betterdiscord.asar at: " << asar << endl;
 	if (isAlreadyPatched(discordAppDirectory)) {
 		cout << "BetterDiscord Was Already Installed!" << endl;
 	}
 	else if (patchDiscord(discordAppDirectory, asar)) {
-		cout << "BetterDiscord Installed!" << endl << endl;
-		return true;
+		cout << "BetterDiscord Installed!" << endl;
 	}
 	else {
 		cout << "[ERROR] Failed to patch Discord!" << endl;
+		return false;
 	}
-	cout << endl;
-	return false;
+	return true;
 }
 
-string toLower(const string& str) {
+static string toLower(const string& str) {
 	string lowerStr = str;
 	transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
 	return lowerStr;
 }
 
-string getChannel(int argc, char* argv[]) {
-	for (int i = 1; i < argc; ++i) {
-		string arg = toLower(argv[i]);
-		if (arg.find("canary") != string::npos) {
-			return "canary";
-		}
-		else if (arg.find("ptb") != string::npos) {
-			return "ptb";
-		}
+static string getChannelStringFromType(const DiscordChannel& channel) {
+	if (channel == DiscordChannel::stable) {
+		return "stable";
 	}
-	return "stable";
-}
-
-string getDiscordFolder(const string& channel) {
-	if (channel == "canary") {
-		return getLocalAppDataPath() + "\\DiscordCanary";
+	else if (channel == DiscordChannel::ptb) {
+		return "ptb";
 	}
-	else if (channel == "ptb") {
-		return getLocalAppDataPath() + "\\DiscordPTB";
+	else if (channel == DiscordChannel::canary) {
+		return "canary";
 	}
 	else {
-		return getLocalAppDataPath() + "\\Discord";
+		return "ErrorDiscordType";
 	}
 }
 
-string getDiscordExeName(const string& channel) {
-	if (channel == "canary") {
-		return "DiscordCanary.exe";
+static string getDiscordStringFromType(const DiscordChannel& channel) {
+	if (channel == DiscordChannel::stable) {
+		return "Discord";
 	}
-	else if (channel == "ptb") {
-		return "DiscordPTB.exe";
+	else if (channel == DiscordChannel::ptb) {
+		return "DiscordPTB";
+	}
+	else if (channel == DiscordChannel::canary) {
+		return "DiscordCanary";
 	}
 	else {
-		return "Discord.exe";
+		return "ErrorDiscordType";
 	}
 }
 
-string renameExe(const string& exeName) {
-	string newName = exeName;
-	newName.insert(newName.find(".exe"), ".moved");
-	return newName;
+static string getDiscordDirectory(const DiscordChannel& channel) {
+	return getLocalAppDataPath() + "\\" + getDiscordStringFromType(channel);
 }
 
-void proxyExecutable(const string& discordDirectory, const string& exeName, const string& autoUpdatePath, bool overwrite = true) {
-	cout << "Proxying " + exeName + "..." << endl;
-	string exe = discordDirectory + "\\" + exeName;
-	string renamedExe = renameExe(exeName);
-	string exeMoved = discordDirectory + "\\" + renamedExe;
+static string getDiscordExeName(const DiscordChannel channel) {
+	return getDiscordStringFromType(channel) + ".exe";
+}
 
-	if (fs::exists(exe) || fs::exists(exeMoved)) {
-		if (!fs::exists(exeMoved)) {
-			cout << "Renaming " + exeName + " from Discord Folder to " + renamedExe + "..." << endl;
-			fs::rename(exe, exeMoved);
+static void proxyExecutable(const string& autoUpdatePath, const string& updatePath, const string& updateMovedPath, const boolean& overwrite = true) {
+	cout << "Proxying " + updatePath << endl;
+	cout <<"\tas " + updateMovedPath << endl;
+	cout << "\twith " + autoUpdatePath << endl;
+
+	if (fs::exists(updatePath) || fs::exists(updateMovedPath)) {
+		if (!fs::exists(updateMovedPath)) {
+			cout << "Renaming " + updatePath + " to " + updateMovedPath + "..." << endl;
+			fs::rename(updatePath, updateMovedPath);
 		}
 		else {
-			cout << renamedExe + " already exists in Discord Folder..." << endl;
+			cout << updateMovedPath + " already exists..." << endl;
 		}
-		cout << "Moving BetterDiscordAutoUpdate.exe to Discord Folder as " + exeName + "..." << endl;
+		cout << "Moving " + autoUpdatePath + " to " + updatePath + "..." << endl;
 		try {
-			fs::copy_file(autoUpdatePath, exe, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none);
+			fs::copy_file(autoUpdatePath, updatePath, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none);
 		}
 		catch (const fs::filesystem_error& e) {
-			cout << "[INFO] Overwrite of " + exeName + "Prevented" << endl;
+			cout << "[INFO] Overwrite of " + updatePath + "Prevented" << endl;
 		}
 	}
 	else {
-		cout << "[ERROR] " + exeName + " not found in at " + discordDirectory <<  endl;
+		cout << "[ERROR] " + updatePath + " not found" <<  endl;
 	}
-	cout << endl;
 }
 
-string getArgs(int argc, char* argv[]) {
+static DiscordChannel getChannel(int argc, char* argv[]) {
+	for (int i = 1; i < argc; ++i) {
+		string arg = toLower(argv[i]);
+		if (arg.find("--stable") != string::npos) {
+			return DiscordChannel::stable;
+		} else if (arg.find("--ptb") != string::npos) {
+			return DiscordChannel::ptb;
+		}
+		else if (arg.find("--canary") != string::npos) {
+			return DiscordChannel::canary;
+		}
+	}
+	return DiscordChannel::error;
+}
+
+static bool shouldSkipInstallation(int argc, char* argv[]) {
+	for (int i = 1; i < argc; ++i) {
+		string arg = toLower(argv[i]);
+		if (arg.find("--auto-update-skip-installation") != string::npos) {
+			return true;
+		}
+	}
+	return false;
+}
+
+static string getArgs(int argc, char* argv[]) {
 	string args;
 	for (int i = 1; i < argc; ++i) {
 		args += argv[i];
@@ -375,70 +421,124 @@ string getArgs(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
     string executed = argv[0];
-	string toExecute = renameExe(executed);
 	string args = getArgs(argc, argv);
-    string channel;
+	DiscordChannel channel = DiscordChannel::error;
 
-	bool manuallyRun = argc == 1 && string(argv[0]).find("BetterDiscordAutoUpdate") != string::npos;
+	string autoUpdateDirectory = getExecutableDir();
+	string autoUpdatePath = getExecutablePath();
 
-    channel = getChannel(argc, argv);
+	bool isProxied = string(argv[0]).find("BetterDiscordAutoUpdate") == string::npos;
+	bool isLaunchingDiscord = string(argv[0]).find("Update.exe") != string::npos;
+	bool manualRun = argc == 1;
+	bool skipInstallation = shouldSkipInstallation(argc, argv);
+	DiscordChannel cliChannel = getChannel(argc, argv);
 
-	if (manuallyRun) {
-		string input;
-		cout << "Enter the Discord Channel to install (canary, ptb, stable): ";
-		cin >> input;
-		if (input == "canary" || input == "ptb" || input == "stable") {
-			channel = input;
-		}
-		else {
-			cout << "Invalid Channel! Defaulting to stable..." << endl;
-			return 1;
-		}
-	}
-
-    string autoUpdateDirectory = getExecutableDir();
-    string autoUpdatePath = getExecutablePath();
-
-    string discordDirectory = getDiscordFolder(channel);
-    string discordAppDirectory = getLatestDiscordAppPath(discordDirectory);
-    string discordExeName = getDiscordExeName(channel);
-    string discordUpdateExeName = "Update.exe";
-
-    string betterDiscordDirectory = getBetterDiscordFolder();
-
-    setupLogging(betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log");
+	setupLogging(autoUpdateDirectory + "\\BetterDiscordAutoUpdate.log");
 
     cout << "BetterDiscord Auto Update" << endl << endl;
 
-    cout << "Installing Channel:\t\t\t" << channel << endl;
-    cout << "BetterDiscordAutoUpdate.exe Directory:\t" << autoUpdateDirectory << endl;
-    cout << "BetterDiscordAutoUpdate.exe Path:\t" << autoUpdatePath << endl;
-    cout << "Discord Directory:\t\t\t" << discordDirectory << endl;
-	cout << "Discord App Directory:\t\t" << discordAppDirectory << endl;
-    cout << "BetterDiscord Directory:\t\t" << betterDiscordDirectory << endl;
-    cout << endl;
+	cout << "AutoUpdate Directory: " << autoUpdateDirectory << endl;
+	cout << "AutoUpdate Path: " << autoUpdatePath << endl << endl;
 
-    if (autoUpdateDirectory != discordDirectory) {
-        proxyExecutable(discordDirectory, discordUpdateExeName, autoUpdatePath);
-    }
-	/*if (autoUpdateDirectory != discordAppDirectory) { //Was an idea to fix BD not installing at first Discord execution, but I don't like it....
-		stopDiscord(discordExeName);
-		stopDiscord(toExecute);
-        proxyExecutable(discordAppDirectory, discordExeName, autoUpdatePath, false);
-    }*/
+	cout << "Executed: " << executed << endl;
+	cout << "Arguments: " << args << endl;
+	cout << "Is Proxied: " << (isProxied ? "True" : "False") << endl;
+	cout << "Is Launching Discord: " << (isLaunchingDiscord ? "True" : "False") << endl;
+	cout << "Skip Installation: " << (skipInstallation ? "True" : "False") << endl;
+	cout << "Manual Run: " << (manualRun ? "True" : "False") << endl << endl;
 
-	do {
-		if (installBetterDiscord(betterDiscordDirectory, discordAppDirectory)) {
-			stopDiscord(discordExeName);
+	if (!isProxied) {
+		if (cliChannel != DiscordChannel::error) {
+			channel = cliChannel;
+			cout << "Cli Channel: " << getChannelStringFromType(cliChannel) << " (" << to_string(cliChannel) << ")" << endl;
+		} else if (manualRun) {
+			string input;
+			cout << "Enter the Discord Channel to install (stable, ptb, canary): ";
+			cin >> input;
+			if (input == "stable") {
+				channel = DiscordChannel::stable;
+			}
+			else if (input == "ptb") {
+				channel = DiscordChannel::ptb;
+			}
+			else if (input == "canary") {
+				channel = DiscordChannel::canary;
+			}
+			else {
+				cout << "[ERROR] Invalid channel argument provided! Use stable, ptb or canary." << endl;
+				return 1;
+			}
+			cout << "Manual Channel: " << getChannelStringFromType(channel) << " (" << to_string(channel) << ")" << endl << endl;
 		}
-		runProcess(toExecute, args);
-	} while (!isAlreadyPatched(discordAppDirectory));
+		else {
+			cout << "[ERROR] No channel argument provided! Use --stable, --ptb or --canary." << endl;
+			return 1;
+		}
+		
+		string discordDirectory = getDiscordDirectory(channel);
+		string discordExeName = getDiscordExeName(channel);
+		string discordUpdateDir = discordDirectory + "\\Update.exe";
+		string discordUpdateMovedDir = discordDirectory + "\\Update.moved.exe";
 
-	if (manuallyRun) {
-		runProcess(discordDirectory + "\\Update.exe", "--processStart "+discordExeName);
-		cout << "You can find this log at: " << betterDiscordDirectory + "\\BetterDiscordAutoUpdate.log" << endl << endl;
-		cout << "Press any key to exit..." << endl;
-		cin.get();
+		cout << "Installing Channel:\t\t\t" << getChannelStringFromType(channel) << " (" << to_string(channel) << ")" << endl;
+		cout << "BetterDiscordAutoUpdate.exe Directory:\t" << autoUpdateDirectory << endl;
+		cout << "BetterDiscordAutoUpdate.exe Path:\t" << autoUpdatePath << endl;
+		cout << "Discord Directory:\t\t\t" << discordDirectory << endl;
+		cout << "Discord Executable Name:\t\t" << discordExeName << endl;
+		cout << "Discord Update.exe Path:\t" << discordUpdateDir << endl;
+		cout << "Discord Update.moved.exe Path:\t" << discordUpdateMovedDir << endl;
+		cout << endl;
+
+		if (autoUpdateDirectory != discordDirectory) {
+			proxyExecutable(autoUpdatePath, discordUpdateDir, discordUpdateMovedDir);
+			cout << endl;
+		}
+		/*if (autoUpdateDirectory != discordAppDirectory) { //Was an idea to fix BD not installing at first Discord execution, but I don't like it....
+			stopDiscord(discordExeName);
+			stopDiscord(toExecute);
+			proxyExecutable(discordAppDirectory, discordExeName, autoUpdatePath, false);
+		}*/
+
+		stopDiscord(discordExeName);
+		cout << "Launching Discord Update.exe to continue the process..." << endl << endl;
+		runProcess(discordDirectory + "\\Update.exe", "--processStart " + discordExeName);
+
+		if (manualRun) {
+			cout << "You can find this log at: " << autoUpdateDirectory + "\\BetterDiscordAutoUpdate.log" << endl << endl;
+			cout << "Press any key to exit..." << endl;
+			cin.get();
+			cin.get();
+		}
+	}
+	else if (isProxied && isLaunchingDiscord) {
+		string discordUpdateMovedDir = executed.insert(executed.find(".exe"), ".moved");
+		string betterDiscordDirectory = getBetterDiscordDirectory();
+		cout << "Discord Update.moved.exe Path: " << discordUpdateMovedDir << endl;
+		cout << "BetterDiscord Directory:\t\t" << betterDiscordDirectory << endl;
+
+		if (skipInstallation) {
+			cout << "Skipping installation as --auto-update-skip-installation argument was provided." << endl;
+			cout << "Launching :" << discordUpdateMovedDir << " to continue the process..." << endl << endl;
+			runProcess(discordUpdateMovedDir, args);
+		}
+		else {
+			string discordDirectory = autoUpdateDirectory;
+			string discordAppDirectory = getLatestDiscordAppPath(discordDirectory);
+
+			cout << "Discord Directory:\t\t\t" << discordDirectory << endl;
+			cout << "Discord App Directory:\t\t" << discordAppDirectory << endl;
+
+			do {
+				if (installBetterDiscord(betterDiscordDirectory, discordAppDirectory)) {
+					//stopDiscord("Update.exe");
+				}
+				cout << "Launching :" << discordUpdateMovedDir << " to continue the process..." << endl << endl;
+				runProcess(discordUpdateMovedDir, args);
+			} while (!isAlreadyPatched(autoUpdateDirectory));
+		}
+	}
+	else {
+		cout << "[ERROR] Invalid execution context detected! This executable is meant to be launched by Discord's Update.exe as a proxy for the Discord executable. If you want to run this manually, simply execute BetterDiscordAutoUpdate.exe and follow the instructions." << endl;
 	}
 
     return 0;
