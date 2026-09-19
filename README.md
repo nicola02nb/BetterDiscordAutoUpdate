@@ -1,3 +1,7 @@
+# ⚠️ Recently BetterDiscord added a new injection style to re-inject it after discord updated ⚠️
+- Windows and Linux users should not have to ever re-inject BetterDiscord
+- macOS users will have to re-inject BetterDiscord less frequently
+
 # BetterDiscordAutoUpdate
 Performs the automatic installation of [BetterDiscord](https://github.com/BetterDiscord/BetterDiscord) after each Discord updates.
 
